@@ -61,13 +61,8 @@ ui <- dashboardPage(
                          menuSubItem("Fluidynamic", tabName = "Fsimul"),
                          menuSubItem("Summary", tabName = "Summary")
                 ),
-                menuItem("Optimization", tabName = 'pca', icon = shiny::icon("angellist"),
-                         menuSubItem("Load Data", tabName ="load" ),
-                         menuSubItem("Optimum Xf", tabName ="xfopt" ),
-                         menuSubItem("Results Xf", tabName ="xfres" )
-                ),
                 hr(),
-                menuItem("Source code",icon = icon("file-code-o"),href = "https://github.com/polgia0/deducit"),
+                menuItem("Source code",icon = icon("file-code-o"),href = "https://github.com/polgia0/ThinLayerEvaporator"),
                 menuItem("Manual", icon = icon("file-pdf-o"),href = "ThinFilm_manual.pdf")
     ),
     HTML('<br><br><br><br>'),
@@ -82,17 +77,17 @@ ui <- dashboardPage(
                 fluidPage(
                   tabsetPanel(type = "tabs",
                               tabPanel("Process Draw",
-                                       br(),
-                                       br(),
-                                       fluidRow(column(12,offset=2,align="center",mainPanel(imageOutput("draw"))))
+                                      br(),
+                                      br(),
+                                      fluidRow(column(12,offset=2,align="center",mainPanel(imageOutput("draw")))),
+                                      br(),
+                                      br(),
+                                      br(),
+                                      br(),
+                                      br(),
+                                      br(),
+                                      column(12, offset=0,align="center",uiOutput("examplecombo"))
                               ),
-                              br(),
-                              br(),
-                              br(),
-                              br(),
-                              br(),
-                              br(),
-                              column(12, offset=0,align="center",uiOutput("examplecombo")),
                               tabPanel("Help", mainPanel(htmlOutput("hlp_draw")))
                   )
                 )
@@ -302,63 +297,8 @@ ui <- dashboardPage(
                               tabPanel("Help", mainPanel(htmlOutput("hlp_summary")))
                   )
                 )
-        ),
-        tabItem(tabName="xfopt",
-                fluidPage(
-                  titlePanel("Molar Fraction Optimization"),
-                  tabsetPanel(type = "tabs",
-                              tabPanel("Plot",
-                                       br(),
-                                       br(),
-                                       column(12,offset=1,sliderInput("eslider", label = h3("Efficiency Range"), min = 1,max = 100,value = c(20, 40))),
-                                       br(),
-                                       fluidRow(plotOutput("xfplot",height=600))
-                              ),
-                              tabPanel("Help",mainPanel(htmlOutput("hlp_xfopt")))
-                  )
-                )
-        ),
-        tabItem(tabName="xfres",
-                fluidPage(
-                  titlePanel("Molar Fraction Results"),
-                  tabsetPanel(type = "tabs",
-                              tabPanel("Plot",
-                                       br(),
-                                       br(),
-                                       fluidRow(plotOutput("xfres",height=600))
-                              ),
-                              tabPanel("Help",mainPanel(htmlOutput("hlp_xfres")))
-                  )
-                )
-        ),
-        tabItem(tabName = "load",
-                fluidPage(
-                  titlePanel("Add Experimental Data File"),
-                  tabsetPanel(type = "tabs",
-                              tabPanel("Experimental Data",
-                                       br(),
-                                       br(),
-                                       column(12,offset = 1,
-                                              box(
-                                                fileInput("file_load", "Choose CSV File",multiple = TRUE,accept = c("text/csv","text/comma-separated-values,text/plain",".csv")),
-                                                checkboxInput("header", "Header", TRUE),
-                                                checkboxInput("rowindex", "Row Index", TRUE),
-                                                radioButtons("sep","Separator",choices = c(Comma = ",",Semicolon = ";",Tab = "\t"),selected = ";"),
-                                                radioButtons("quote", "Quote",choices = c(None = "","Double Quote" = '"',"Single Quote" = "'"),selected = '"'),
-                                                radioButtons("dec", "Decimal",choices = c(Comma = ",",Point = "."),selected = ",")
-                                                , background ="light-blue"
-                                              )
-                                       ),
-                                       br(),
-                                       br(),
-                                       column(12,offset = 1,
-                                              fluidRow(column(6, verbatimTextOutput("loadvalue")))
-                                       )
-                              ),
-                              tabPanel("Help", mainPanel(htmlOutput("hlp_expdata")))
-                  )
-                )
         )
+
       )
     )
     

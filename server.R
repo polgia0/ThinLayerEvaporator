@@ -86,9 +86,9 @@ algebric_system<-function(y,pars){
         Re1<-4*LFw/Mu
         Re2<-D^2*nrot*Ro/Mu
         Pr<-Mu*Cpm/Kcm
-        #ho<-2*sqrt(Rom*Kcm*Cpm/pi/tc)/he       #kcal/sm2K
-        #h<-Kcm/D*(0.018*(Re1^0.46)*(Re2^0.6)*(Pr^0.87)*(D/Z)^0.48*nrot^0.24)
-        h<-he1*nrot^he2*LFw^he3    
+        ho<-2*sqrt(Rom*Kcm*Cpm/pi/tc)/he       #kcal/sm2K
+        h<-Kcm/D*(0.018*(Re1^0.46)*(Re2^0.6)*(Pr^0.87)*(D/Z)^0.48*nrot^0.24)
+        #h<-he1*nrot^he2*LFw^he3    
         if(h<0)h<-0
         kx<-2*Rom*sqrt(D1/pi/tc)              #kg/m2s
         Qv<-LFw/Rom                           #m3/s
@@ -150,8 +150,7 @@ Differential_system<-function(t,y,pars){
     })
   })
 }
-Constrains<-function(t,y,pars)
-{
+Constrains<-function(t,y,pars){
   yroot<-rep(1,2)
   with(as.list(c(y,pars)),{
     yroot[1]<-L-0.0
@@ -159,8 +158,7 @@ Constrains<-function(t,y,pars)
     return(yroot)
   })
 }
-eventfun<-function(t,y,pars)
-{
+eventfun<-function(t,y,pars){
   yroot<-Constrains(t,y,pars)
   indroot<-as.logical(abs(yroot)<1e-9)
   with(as.list(c(y,pars)),{
@@ -464,21 +462,6 @@ server = function(input, output) { # begin server
     validate(need(nrow(values$DS)!=0,""))
     paste(as.character(dim(values$DS)[1]*dim(values$DS)[2])," Values Loaded")
   })
-  observeEvent(input$file_load,{
-    req(input$file_load)
-    inFile <- input$file_load
-    if (is.null(inFile))
-      return(NULL)
-    req(input$rowindex)
-    if (input$rowindex) {
-      df <- read.csv(inFile$datapath,header = input$header,sep = input$sep,
-                     row.names=1,quote = input$quote, dec=input$dec)
-    }else{
-      df <- read.csv(inFile$datapath,header = input$header,sep = input$sep,
-                     quote = input$quote, dec=input$dec)
-    }
-    values$DS<-df
-  })
   output$MFplot<-renderPlot({
     df<-TFsimulation()$df
     plt<-ggplot(df,aes(x=time,y=L))+theme_bw()
@@ -635,236 +618,6 @@ server = function(input, output) { # begin server
                                        options = list(paging = FALSE,searching = FALSE),
                                        filter='none',rownames=FALSE)})
   })
-  observeEvent(input$file_load,{
-    req(input$file_load,input$rowindex)
-    inFile <- input$file_load
-    if (input$rowindex) {
-      values$dfopt<- read.csv(inFile$datapath,header = input$header,sep = input$sep,
-                     row.names=1,quote = input$quote, dec=input$dec)
-    }else{
-      values$dfopt<- read.csv(inFile$datapath,header = input$header,sep = input$sep,
-                     quote = input$quote, dec=input$dec)
-    }
-  })
-  output$xfplot<-renderPlot({
-    RMSE<-rep(0,input$eslider[2]-input$eslider[1]+1)
-    np<-nrow(values$dfopt)
-    vHE<-input$eslider[1]:input$eslider[2]
-    ne<-length(vHE)
-    j<-0
-    HEmin<-vHE[1]
-    RMSEmin<-100
-    withProgress(message = 'Making plot',value=0,min=0,max=ne,{
-            for(j in 1:ne){
-              REc<-rep(0,np)
-              for (nt in 1:np){
-                values$SS<-as.numeric(values$dfopt[nt,'SolventSelector'])
-                values$NSS<-as.numeric(values$dfopt[nt,'NonSolventSelector'])
-                pars<-make_data()
-                pars<-c(pars,
-                        SS=values$SS,
-                        NSS=values$NSS,
-                        he=vHE[j]/100,
-                        Ro=values$dfopt[nt,'nRo'],
-                        Mu=values$dfopt[nt,'nMu'],
-                        W0=values$dfopt[nt,'nW0'],
-                        LFw=values$dfopt[nt,'nLFw']/3600,
-                        WF=values$dfopt[nt,'nWF'],
-                        TH=values$dfopt[nt,'nTH']+273,
-                        P=values$dfopt[nt,'nP'],
-                        nrot=values$dfopt[nt,'nRot']/60,
-                        Bn=values$dfopt[nt,'nBn'],
-                        H0=values$dfopt[nt,'nH0'],
-                        Z=values$dfopt[nt,'nZ'],
-                        D=values$dfopt[nt,'nD'],
-                        C=pi*values$dfopt[nt,'nD'])
-                if(values$NSS!=1){
-                  pars<-with(as.list(pars),
-                             c(pars,
-                               xF=WF/MW1/(WF/MW1+(1-W0-WF)/MW2),
-                               LF=LFw*(WF/MW1+(1-W0-WF)/MW2)
-                             )
-                  )
-                }else{
-                  pars<-with(as.list(pars),
-                             c(pars,
-                               xF=1,
-                               LF=LFw*(WF/MW1)
-                             )
-                  )
-                }
-                dz<-log(1:60)
-                z<-rev(values$dfopt[nt,'nZ']*(dz[60]-dz)/dz[60])
-                y<-with(c(as.list(pars)),{# initial conditions
-                  c(  L=LF,               #kmol/s
-                      x1=xF,              #-
-                      Qt=0,               #kcal/s
-                      DIS=0,              #kg/s
-                      DIS1=0)             #-
-                })
-                values$pars<-pars
-                out<-lsodar(
-                  y=y,
-                  times=z,
-                  fun=Differential_system,
-                  rootfunc=Constrains,
-                  rtol=1e-4,
-                  atol=rep(1e-6,length(y)),
-                  parms=pars,
-                  events=list(func=eventfun,root=TRUE,terminalroot=c(1,2))
-                )
-                if (!is.null(attr(out,"indroot"))){
-                  if(attr(out,"indroot")==1){
-                    nid<-dim(out)[1]
-                    if(nid<length(z)){
-                      for(i in (nid+1):length(z)){
-                        out<-rbind(out,out[nid,])
-                      }
-                    }
-                    out<-as.data.frame(out)
-                    out$time<-z
-                  }
-                }
-                out<-as.data.frame(out)
-                REc[nt]<-(out$L[nrow(out)]/out$L[1]-values$dfopt$nWE[nt])^2
-              }
-              RMSE[j]<-sum(REc)
-              if(RMSE[j]<RMSEmin){
-                RMSEmin<-RMSE[j]
-                HEmin<-vHE[j]
-              }
-              incProgress(1, detail = paste("Doing part", j))
-            }
-    })
-    values$HEopt<-HEmin
-    dfxf<-data.frame(HE=input$eslider[1]:input$eslider[2],RMSE=RMSE)
-    plt<-ggplot(dfxf,aes(x=HE,y=RMSE))+theme_bw()
-    plt<-plt+geom_line()+geom_point()
-    plt<-plt+labs(title=paste("RMSE vs. Parameter : minimum in :",format(HEmin,digits=4),sep=' '), x="Efficiency (-)", y ="RMSE (-)")
-    plt<-plt+theme(plot.title=element_text(face="bold",size="14", color="brown"),legend.position="none")
-    print(plt)
-  })
-  respfunc<-function(he){
-    np<-nrow(values$dfopt)
-    WEc<-rep(0,np)
-    for (nt in 1:np){
-      values$SS<-as.numeric(values$dfopt[nt,'SolventSelector'])
-      values$NSS<-as.numeric(values$dfopt[nt,'NonSolventSelector'])
-      pars<-make_data()
-      pars<-c(pars,
-              SS=values$SS,
-              NSS=values$NSS,
-              he1=he[1],
-              he2=he[2],
-              he3=he[3],
-              he4=he[4],
-              he5=he[5],
-              he6=he[6],
-              Ro=values$dfopt[nt,'nRo'],
-              Mu=values$dfopt[nt,'nMu'],
-              W0=values$dfopt[nt,'nW0'],
-              LFw=values$dfopt[nt,'nLFw']/3600,
-              WF=values$dfopt[nt,'nWF'],
-              TH=values$dfopt[nt,'nTH']+273,
-              P=values$dfopt[nt,'nP'],
-              nrot=values$dfopt[nt,'nRot']/60,
-              Bn=values$dfopt[nt,'nBn'],
-              H0=values$dfopt[nt,'nH0'],
-              Z=values$dfopt[nt,'nZ'],
-              D=values$dfopt[nt,'nD'],
-              C=pi*values$dfopt[nt,'nD'])
-      if(values$NSS!=1){
-        pars<-with(as.list(pars),
-                   c(pars,
-                     xF=WF/MW1/(WF/MW1+(1-W0-WF)/MW2),
-                     LF=LFw*(WF/MW1+(1-W0-WF)/MW2)
-                   )
-        )
-      }else{
-        pars<-with(as.list(pars),
-                   c(pars,
-                     xF=1,
-                     LF=LFw*(WF/MW1)
-                   )
-        )
-      }
-      dz<-log(1:60)
-      z<-rev(values$dfopt[nt,'nZ']*(dz[60]-dz)/dz[60])
-      y<-with(c(as.list(pars)),{# initial conditions
-        c(  L=LF,               #kmol/s
-            x1=xF,              #-
-            Qt=0,               #kcal/s
-            DIS=0,              #kg/s
-            DIS1=0)             #-
-      })
-      values$pars<-pars
-      out<-lsodar(
-        y=y,
-        times=z,
-        fun=Differential_system,
-        rootfunc=Constrains,
-        rtol=1e-4,
-        atol=rep(1e-6,length(y)),
-        parms=pars,
-        events=list(func=eventfun,root=TRUE,terminalroot=c(1,2))
-      )
-      if (!is.null(attr(out,"indroot"))){
-        if(attr(out,"indroot")==1){
-          nid<-dim(out)[1]
-          if(nid<length(z)){
-            for(i in (nid+1):length(z)){
-              out<-rbind(out,out[nid,])
-            }
-          }
-          out<-as.data.frame(out)
-          out$time<-z
-        }
-      }
-      out<-as.data.frame(out)
-      WEc[nt]<-out$L[nrow(out)]/out$L[1]
-    }
-    #print(WEc)
-  return(WEc) 
-  }
-  optfunc<-function(he){
-    WEm<-values$dfopt$nWE
-    WEc<-respfunc(he)
-    RMSE<-sum((WEc-WEm)^2)
-    print(c(he,RMSE))
-    return(RMSE)
-  }
-  output$xfres<-renderPlot({
-    #h<-he1*nrot^he2*TH^he3*LFw^he4    
-    # he1<-1e-4
-    # he2<-0.5
-    # he3<-1
-    # he4<-0.5
-    # he1<-0.0000117331
-    # he2<-0.0571532473
-    # he3<-2.2629273020
-    # he4<-0.6847104698
-    # he1<-5.583121e-04
-    # he2<-1.363871e-03
-    # he3<-1.510147e-04
-    # he4<--6.320389e-04
-    # he5<-8.433021e-06
-    # he6<--9.520139e-04
-    he1<-5.583121e-04
-    he2<-1.363871e-03
-    he3<-1.510147e-04
-    opt_out<-optim_nm(fun=optfunc,k=3,start=c(he1,he2,he3),trace=TRUE)
-    print(opt_out)
-    df<-as.data.frame(opt_out$trace)
-    WEc<-respfunc(opt_out$par)
-    WEm<-values$dfopt$nWE
-    df<-data.frame(WEc=WEc,WEm=WEm)
-    plt<-ggplot(df,aes(x=WEm,y=WEc))+theme_bw()
-    plt<-plt+geom_point()+xlim(min(df),max(df))+ylim(min(df),max(df))
-    plt<-plt+labs(title="Calculated vs. Measured",x="X measured", y ="X calulated")
-    plt<-plt+ geom_abline(intercept=0,slope=1)
-    plt<-plt+theme(plot.title=element_text(face="bold",size="14", color="brown"),legend.position="none")
-    print(plt)
-  })
   output$hlp_geometry<-renderUI({includeHTML("hlp_geometry.html")})
   output$hlp_process<-renderUI({includeHTML("hlp_process.html")})
   output$hlp_expdata<-renderUI({includeHTML("hlp_expdata.html")})
@@ -873,6 +626,4 @@ server = function(input, output) { # begin server
   output$hlp_MFsimul<-renderUI({includeHTML("hlp_MFsimul.html")})
   output$hlp_Fsimul<-renderUI({includeHTML("hlp_Fsimul.html")})
   output$hlp_summary<-renderUI({includeHTML("hlp_summary.html")})
-  output$hlp_xfopt<-renderUI({includeHTML("hlp_xfopt.html")})
-  output$hlp_xfres<-renderUI({includeHTML("hlp_xfres.html")})
 } # end of server
